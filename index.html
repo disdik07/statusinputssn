@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dasbor Status Penginputan Data</title>
+    <title>Dasbor Status Penginputan Data Interaktif</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Animasi sederhana untuk loader */
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #3498db;
@@ -23,34 +24,42 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        
+        /* Modal Styles */
+        .modal-overlay {
+            transition: opacity 0.3s ease;
         }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
+        .modal-container {
+            transition: transform 0.3s ease;
         }
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 10px;
+        
+        /* Table row hover effect */
+        .clickable-row:hover {
+            background-color: #f9fafb; /* gray-50 */
+            cursor: pointer;
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
+        
+        /* Banded columns */
+        tbody tr:nth-child(odd) {
+           background-color: #f9fafb;
         }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
-    <div class="container mx-auto p-4 md:p-8">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Dasbor Status Penginputan Data</h1>
+    <div class="container mx-auto p-4 md:p-6">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Dasbor Interaktif Penginputan Data</h1>
             <p class="text-gray-600 mt-2">Memantau progres input data sekolah secara real-time.</p>
         </header>
 
-        <!-- Ringkasan Statistik -->
-        <div id="summary-section" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-md flex items-center space-x-4">
+        <!-- Ringkasan Statistik (Clickable Cards) -->
+        <div id="summary-section" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div data-status-filter="semua" class="summary-card bg-white p-6 rounded-xl shadow-md flex items-center space-x-4 cursor-pointer hover:bg-gray-50 transition-colors">
                 <div class="bg-blue-100 p-3 rounded-full">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
                 </div>
@@ -59,7 +68,7 @@
                     <p id="total-sekolah" class="text-2xl font-bold">0</p>
                 </div>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-md flex items-center space-x-4">
+            <div data-status-filter="sudah" class="summary-card bg-white p-6 rounded-xl shadow-md flex items-center space-x-4 cursor-pointer hover:bg-gray-50 transition-colors">
                 <div class="bg-green-100 p-3 rounded-full">
                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </div>
@@ -68,7 +77,7 @@
                     <p id="sudah-mengisi" class="text-2xl font-bold">0</p>
                 </div>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-md flex items-center space-x-4">
+            <div data-status-filter="belum" class="summary-card bg-white p-6 rounded-xl shadow-md flex items-center space-x-4 cursor-pointer hover:bg-gray-50 transition-colors">
                 <div class="bg-red-100 p-3 rounded-full">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </div>
@@ -78,29 +87,73 @@
                 </div>
             </div>
         </div>
+
+        <!-- Grafik -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <h3 class="font-semibold mb-2 text-center">Data per Kecamatan</h3>
+                <div class="relative h-80">
+                    <canvas id="kecamatanChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <h3 class="font-semibold mb-2 text-center">Data per Jenjang</h3>
+                <div class="relative h-80">
+                    <canvas id="jenjangChart"></canvas>
+                </div>
+            </div>
+        </div>
         
         <!-- Kontrol dan Filter -->
         <div class="bg-white p-4 rounded-xl shadow-md mb-6 space-y-4">
-            <!-- Tipe Penginputan -->
-            <div>
-                <label class="text-sm font-medium text-gray-700 mb-2 block">Pilih Tipe Penginputan:</label>
-                <div id="tipe-tabs" class="flex flex-wrap gap-2">
-                    <button data-tipe="Kuesioner" class="tipe-button bg-blue-500 text-white px-4 py-2 text-sm font-semibold rounded-lg shadow-sm">Kuesioner</button>
-                    <button data-tipe="Data Dukung" class="tipe-button bg-gray-200 text-gray-700 px-4 py-2 text-sm font-semibold rounded-lg">Data Dukung</button>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                 <div>
+                    <label for="filter-tipe" class="text-sm font-medium text-gray-700 block">Tipe Input</label>
+                    <select id="filter-tipe" class="filter-input mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <option value="Kuesioner">Kuesioner</option>
+                        <option value="Data Dukung">Data Dukung</option>
+                    </select>
+                </div>
+                 <div>
+                    <label for="filter-jenjang" class="text-sm font-medium text-gray-700 block">Jenjang</label>
+                    <select id="filter-jenjang" class="filter-input mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <option value="">Semua Jenjang</option>
+                        <option value="SD">SD</option>
+                        <option value="SMP">SMP</option>
+                        <option value="PNF">PNF</option>
+                    </select>
+                </div>
+                 <div>
+                    <label for="filter-kecamatan" class="text-sm font-medium text-gray-700 block">Kecamatan</label>
+                    <select id="filter-kecamatan" class="filter-input mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <option value="">Semua Kecamatan</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-keterangan" class="text-sm font-medium text-gray-700 block">Keterangan</label>
+                    <select id="filter-keterangan" class="filter-input mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <option value="">Semua Keterangan</option>
+                        <option value="sudah">Sudah Mengisi</option>
+                        <option value="belum">Belum Mengisi</option>
+                    </select>
                 </div>
             </div>
-             <!-- Jenjang dan Pencarian -->
-            <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                <div id="jenjang-tabs" class="flex flex-wrap gap-2">
-                    <button data-jenjang="SD" class="jenjang-button bg-blue-500 text-white px-4 py-2 text-sm font-semibold rounded-lg shadow-sm">SD</button>
-                    <button data-jenjang="SMP" class="jenjang-button bg-gray-200 text-gray-700 px-4 py-2 text-sm font-semibold rounded-lg">SMP</button>
-                    <button data-jenjang="PNF" class="jenjang-button bg-gray-200 text-gray-700 px-4 py-2 text-sm font-semibold rounded-lg">PNF</button>
-                </div>
-                <div class="relative">
-                     <input type="text" id="search-input" placeholder="Cari nama sekolah atau NPSN..." class="pl-10 pr-4 py-2 w-full md:w-64 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 pt-2">
+                <div class="relative flex-grow">
+                     <input type="text" id="search-input" placeholder="Cari nama sekolah atau NPSN..." class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                          <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                      </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="download-excel" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                        Excel
+                    </button>
+                    <button id="share-whatsapp" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.487 5.235 3.487 8.413 0 6.557-5.338 11.892-11.894 11.892-1.99 0-3.903-.52-5.687-1.475L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.886-.001 2.225.651 4.315 1.731 6.086l.001.004l-1.27 4.625l4.733-1.241z"/></svg>
+                        Share
+                    </button>
                 </div>
             </div>
         </div>
@@ -114,10 +167,15 @@
                 <table class="w-full text-sm text-left text-gray-500">
                     <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                         <tr>
-                            <!-- Header tabel akan di-generate oleh JavaScript -->
+                            <th scope="col" class="px-6 py-3">NPSN</th>
+                            <th scope="col" class="px-6 py-3">Nama Satuan Pendidikan</th>
+                            <th scope="col" class="px-6 py-3">Jenjang</th>
+                            <th scope="col" class="px-6 py-3">Status Sekolah</th>
+                            <th scope="col" class="px-6 py-3">Kecamatan</th>
+                            <th scope="col" class="px-6 py-3">Keterangan</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y">
+                    <tbody id="table-body">
                         <!-- Isi tabel akan di-generate oleh JavaScript -->
                     </tbody>
                 </table>
@@ -125,56 +183,451 @@
                     <p class="text-gray-500 font-semibold">Data tidak ditemukan.</p>
                 </div>
             </div>
+            <!-- Pagination -->
+            <div id="pagination-controls" class="px-6 py-4 border-t flex justify-between items-center">
+                 <!-- Kontrol paginasi akan di-generate oleh JavaScript -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for Details -->
+    <div id="detail-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none">
+        <div class="modal-container bg-white w-full max-w-6xl rounded-xl shadow-lg max-h-[90vh] flex flex-col transform scale-95">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h2 id="modal-title" class="text-xl font-bold">Detail Data</h2>
+                <button class="modal-close-btn text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+            </div>
+            <div id="modal-content" class="p-6 overflow-y-auto">
+                <!-- Konten modal akan di-generate oleh JavaScript -->
+            </div>
+            <div id="modal-footer" class="p-4 border-t bg-gray-50 flex justify-end items-center gap-4 rounded-b-xl">
+                 <!-- Kontrol modal akan di-generate oleh JavaScript -->
+                 <button class="modal-close-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">Tutup</button>
+            </div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- KONFIGURASI (Disamarkan) ---
+            // --- KONFIGURASI ---
             const SPREADSHEET_ID = atob('MXhsVDZBRzkzTzlmOGxwSjJqbnlUOFVvMzhDYWV1NDVrck8tbG01T3Z1LVU=');
             const SHEET_CONFIG = JSON.parse(atob('eyJLdWVzaW9uZXIiOnsiUE5GIjoiMCIsIlNEIjoiMTM4MzQ0MjY0NSIsIlNNUCI6IjQ5NTQyMjI2NiJ9LCJEYXRhIER1a3VuZyI6eyJQTkYiOiIxODI1NjkxMzA4IiwiU0QiOiI2NDEyNzIwMyIsIlNNUCI6IjY4MDk3MTI2OSJ9fQ=='));
+            const ROWS_PER_PAGE = 10;
 
             // --- ELEMEN DOM ---
-            const tipeTabsContainer = document.getElementById('tipe-tabs');
-            const jenjangTabsContainer = document.getElementById('jenjang-tabs');
-            const searchInput = document.getElementById('search-input');
-            const tableHead = document.querySelector('table thead tr');
-            const tableBody = document.querySelector('table tbody');
             const loader = document.getElementById('loader-container');
             const dataContainer = document.getElementById('data-container');
+            const searchInput = document.getElementById('search-input');
+            const tableBody = document.getElementById('table-body');
             const noDataMessage = document.getElementById('no-data');
+            
             const totalSekolahEl = document.getElementById('total-sekolah');
             const sudahMengisiEl = document.getElementById('sudah-mengisi');
             const belumMengisiEl = document.getElementById('belum-mengisi');
 
+            const filterTipe = document.getElementById('filter-tipe');
+            const filterJenjang = document.getElementById('filter-jenjang');
+            const filterKecamatan = document.getElementById('filter-kecamatan');
+            const filterKeterangan = document.getElementById('filter-keterangan');
+
+            const downloadExcelBtn = document.getElementById('download-excel');
+            const shareWhatsappBtn = document.getElementById('share-whatsapp');
+            const paginationControls = document.getElementById('pagination-controls');
+
+            const detailModal = document.getElementById('detail-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalContent = document.getElementById('modal-content');
+            const modalFooter = document.getElementById('modal-footer');
+
             // --- STATE APLIKASI ---
-            let activeTipe = 'Kuesioner';
-            let activeJenjang = 'SD';
-            let dataCache = {};
+            let rawDataCache = {};
+            let allData = [];
+            let filteredData = [];
+            let currentPage = 1;
+            let kecamatanChart, jenjangChart;
 
-            // --- FUNGSI-FUNGSI ---
-            async function fetchData(gid, cacheKey) {
-                if (dataCache[cacheKey]) {
-                    return dataCache[cacheKey];
-                }
+            const state = {
+                tipe: 'Kuesioner',
+                jenjang: '',
+                kecamatan: '',
+                keterangan: '',
+                searchTerm: ''
+            };
+            
+            // --- STATE MODAL ---
+            let modalState = {
+                data: [],
+                filteredData: [],
+                currentPage: 1,
+                searchTerm: '',
+                jenjang: '',
+                kecamatan: ''
+            };
 
+            // --- FUNGSI UTAMA ---
+            async function initializeApp() {
+                await loadDataForCurrentTipe();
+                populateFilters();
+                addEventListeners();
+                applyFiltersAndRender();
+            }
+
+            async function loadDataForCurrentTipe() {
                 showLoader(true);
-                const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
-                
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    const csvText = await response.text();
-                    const parsedData = parseCSV(csvText);
-                    dataCache[cacheKey] = parsedData;
-                    return parsedData;
-                } catch (error) {
-                    console.error('Gagal mengambil data:', error);
-                    alert('Tidak dapat memuat data. Periksa koneksi internet Anda atau pastikan Google Sheet dapat diakses publik.');
-                    return [];
-                } finally {
-                    showLoader(false);
+                const jenjangs = ['SD', 'SMP', 'PNF'];
+                let combinedData = [];
+
+                for (const jenjang of jenjangs) {
+                    const cacheKey = `${state.tipe}-${jenjang}`;
+                    if (rawDataCache[cacheKey]) {
+                        combinedData.push(...rawDataCache[cacheKey]);
+                        continue;
+                    }
+                    const gid = SHEET_CONFIG[state.tipe]?.[jenjang];
+                    if (gid || gid === "0") {
+                        const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
+                        try {
+                            const response = await fetch(url);
+                            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                            const csvText = await response.text();
+                            const parsedData = parseCSV(csvText).map(row => ({...row, Jenjang: jenjang }));
+                            rawDataCache[cacheKey] = parsedData;
+                            combinedData.push(...parsedData);
+                        } catch (error) {
+                            console.error(`Gagal mengambil data untuk ${jenjang}:`, error);
+                        }
+                    }
                 }
+                allData = combinedData;
+                showLoader(false);
+            }
+            
+            function applyFiltersAndRender() {
+                filteredData = allData.filter(row => {
+                    const status = (row['Keterangan'] || '').toLowerCase();
+                    const isSudah = status.includes('sudah') || status.includes('selesai');
+                    
+                    const matchJenjang = !state.jenjang || row['Jenjang'] === state.jenjang;
+                    const matchKecamatan = !state.kecamatan || (row['Kecamatan'] || '').toLowerCase() === state.kecamatan.toLowerCase();
+                    const matchKeterangan = !state.keterangan || (state.keterangan === 'sudah' && isSudah) || (state.keterangan === 'belum' && !isSudah);
+                    const matchSearch = !state.searchTerm || 
+                                       (row['Nama Satuan Pendidikan'] || '').toLowerCase().includes(state.searchTerm) ||
+                                       (row['NPSN'] || '').toLowerCase().includes(state.searchTerm);
+
+                    return matchJenjang && matchKecamatan && matchKeterangan && matchSearch;
+                });
+
+                currentPage = 1;
+                updateDashboard();
+            }
+
+            function updateDashboard() {
+                updateSummaryCards();
+                updateCharts();
+                renderTable();
+                updatePagination();
+            }
+
+            // --- FUNGSI RENDER KOMPONEN ---
+
+            function updateSummaryCards() {
+                const total = filteredData.length;
+                const sudah = filteredData.filter(row => {
+                    const status = (row['Keterangan'] || '').toLowerCase();
+                    return status.includes('sudah') || status.includes('selesai');
+                }).length;
+                const belum = total - sudah;
+
+                totalSekolahEl.textContent = total;
+                sudahMengisiEl.textContent = sudah;
+                belumMengisiEl.textContent = belum;
+            }
+
+            function renderTable() {
+                if (filteredData.length === 0) {
+                    tableBody.innerHTML = '';
+                    noDataMessage.classList.remove('hidden');
+                    return;
+                }
+
+                noDataMessage.classList.add('hidden');
+                const startIndex = (currentPage - 1) * ROWS_PER_PAGE;
+                const endIndex = startIndex + ROWS_PER_PAGE;
+                const pageData = filteredData.slice(startIndex, endIndex);
+
+                tableBody.innerHTML = pageData.map((row, index) => {
+                    const status = (row['Keterangan'] || '').toLowerCase();
+                    const isFilled = status.includes('sudah') || status.includes('selesai');
+                    const bgColor = isFilled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                    
+                    return `
+                        <tr class="clickable-row" data-index="${startIndex + index}">
+                            <td class="px-6 py-4 whitespace-nowrap">${row['NPSN'] || ''}</td>
+                            <td class="px-6 py-4">${row['Nama Satuan Pendidikan'] || ''}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${row['Jenjang'] || ''}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${row['Status Sekolah'] || ''}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${row['Kecamatan'] || ''}</td>
+                            <td class="px-6 py-4"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${bgColor}">${row['Keterangan'] || 'Belum'}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            function updatePagination() {
+                const totalPages = Math.ceil(filteredData.length / ROWS_PER_PAGE);
+                paginationControls.innerHTML = '';
+                if (totalPages <= 1) return;
+
+                let paginationHTML = `<span class="text-sm text-gray-700">Halaman ${currentPage} dari ${totalPages}</span>`;
+                let buttonsHTML = '<div class="flex items-center gap-2">';
+                
+                buttonsHTML += `<button data-page="${currentPage - 1}" class="pagination-btn" ${currentPage === 1 ? 'disabled' : ''}>Sebelumnya</button>`;
+                buttonsHTML += `<button data-page="${currentPage + 1}" class="pagination-btn" ${currentPage === totalPages ? 'disabled' : ''}>Berikutnya</button>`;
+
+                buttonsHTML += '</div>';
+                paginationControls.innerHTML = paginationHTML + buttonsHTML;
+                
+                document.querySelectorAll('.pagination-btn').forEach(btn => {
+                    btn.classList.add('px-4', 'py-2', 'text-sm', 'font-medium', 'text-gray-700', 'bg-white', 'border', 'border-gray-300', 'rounded-md', 'hover:bg-gray-50', 'disabled:opacity-50', 'disabled:cursor-not-allowed');
+                });
+            }
+
+            function updateCharts() {
+                // Data per Kecamatan
+                const kecamatanData = filteredData.reduce((acc, row) => {
+                    const kecamatan = row['Kecamatan'] || 'Tidak Diketahui';
+                    if (!acc[kecamatan]) {
+                        acc[kecamatan] = { sudah: 0, belum: 0 };
+                    }
+                    const status = (row['Keterangan'] || '').toLowerCase();
+                    const isSudah = status.includes('sudah') || status.includes('selesai');
+                    if (isSudah) acc[kecamatan].sudah++;
+                    else acc[kecamatan].belum++;
+                    return acc;
+                }, {});
+
+                const kecamatanLabels = Object.keys(kecamatanData);
+                const kecamatanSudah = kecamatanLabels.map(k => kecamatanData[k].sudah);
+                const kecamatanBelum = kecamatanLabels.map(k => kecamatanData[k].belum);
+
+                if (kecamatanChart) kecamatanChart.destroy();
+                kecamatanChart = new Chart(document.getElementById('kecamatanChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: kecamatanLabels,
+                        datasets: [
+                            { label: 'Sudah', data: kecamatanSudah, backgroundColor: 'rgba(75, 192, 192, 0.6)' },
+                            { label: 'Belum', data: kecamatanBelum, backgroundColor: 'rgba(255, 99, 132, 0.6)' }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+                });
+
+                // Data per Jenjang
+                const jenjangData = filteredData.reduce((acc, row) => {
+                    const jenjang = row['Jenjang'] || 'Tidak Diketahui';
+                     if (!acc[jenjang]) {
+                        acc[jenjang] = { sudah: 0, belum: 0 };
+                    }
+                    const status = (row['Keterangan'] || '').toLowerCase();
+                    const isSudah = status.includes('sudah') || status.includes('selesai');
+                    if (isSudah) acc[jenjang].sudah++;
+                    else acc[jenjang].belum++;
+                    return acc;
+                }, {});
+                
+                const jenjangLabels = Object.keys(jenjangData);
+                const jenjangSudah = jenjangLabels.map(j => jenjangData[j].sudah);
+                const jenjangBelum = jenjangLabels.map(j => jenjangData[j].belum);
+
+                if (jenjangChart) jenjangChart.destroy();
+                jenjangChart = new Chart(document.getElementById('jenjangChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: jenjangLabels,
+                        datasets: [{
+                            label: 'Jumlah Sekolah',
+                            data: jenjangLabels.map(j => jenjangData[j].sudah + jenjangData[j].belum),
+                            backgroundColor: ['rgba(54, 162, 235, 0.6)', 'rgba(255, 206, 86, 0.6)', 'rgba(153, 102, 255, 0.6)']
+                        }]
+                    },
+                     options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+
+
+            // --- FUNGSI MODAL ---
+            function openCardModal(data, title) {
+                modalState = {
+                    data: data,
+                    filteredData: data,
+                    currentPage: 1,
+                    searchTerm: '',
+                    jenjang: '',
+                    kecamatan: ''
+                };
+                modalTitle.textContent = title;
+                renderModalContent();
+                openModal();
+            }
+
+            function applyModalFiltersAndRender() {
+                modalState.filteredData = modalState.data.filter(row => {
+                    const matchJenjang = !modalState.jenjang || row['Jenjang'] === modalState.jenjang;
+                    const matchKecamatan = !modalState.kecamatan || (row['Kecamatan'] || '').toLowerCase() === modalState.kecamatan.toLowerCase();
+                    const matchSearch = !modalState.searchTerm || 
+                                       (row['Nama Satuan Pendidikan'] || '').toLowerCase().includes(modalState.searchTerm) ||
+                                       (row['NPSN'] || '').toLowerCase().includes(modalState.searchTerm);
+                    return matchJenjang && matchKecamatan && matchSearch;
+                });
+                modalState.currentPage = 1;
+                renderModalContent();
+            }
+
+            function renderModalContent() {
+                // Build Controls
+                const kecamatans = [...new Set(modalState.data.map(row => row['Kecamatan']).filter(Boolean))].sort();
+                const jenjangs = [...new Set(modalState.data.map(row => row['Jenjang']).filter(Boolean))].sort();
+
+                let controlsHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 border rounded-lg bg-gray-50">
+                        <input type="text" id="modal-search" placeholder="Cari di dalam pop-up..." class="md:col-span-2 w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select id="modal-filter-jenjang" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Semua Jenjang</option>
+                            ${jenjangs.map(j => `<option value="${j}">${j}</option>`).join('')}
+                        </select>
+                        <select id="modal-filter-kecamatan" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Semua Kecamatan</option>
+                            ${kecamatans.map(k => `<option value="${k}">${k}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+
+                // Build Table
+                const startIndex = (modalState.currentPage - 1) * ROWS_PER_PAGE;
+                const endIndex = startIndex + ROWS_PER_PAGE;
+                const pageData = modalState.filteredData.slice(startIndex, endIndex);
+
+                let tableHTML = '<p class="text-center text-gray-500 py-8">Tidak ada data untuk ditampilkan.</p>';
+                if (pageData.length > 0) {
+                    tableHTML = `
+                        <div class="overflow-x-auto border rounded-lg">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="p-3 text-left font-semibold">NPSN</th>
+                                        <th class="p-3 text-left font-semibold">Nama Satuan Pendidikan</th>
+                                        <th class="p-3 text-left font-semibold">Kecamatan</th>
+                                        <th class="p-3 text-left font-semibold">Keterangan</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${pageData.map(row => `
+                                        <tr class="border-b hover:bg-gray-50">
+                                            <td class="p-3">${row['NPSN']}</td>
+                                            <td class="p-3">${row['Nama Satuan Pendidikan']}</td>
+                                            <td class="p-3">${row['Kecamatan']}</td>
+                                            <td class="p-3">${row['Keterangan']}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+
+                // Build Pagination
+                const totalPages = Math.ceil(modalState.filteredData.length / ROWS_PER_PAGE);
+                let paginationHTML = '';
+                if (totalPages > 1) {
+                    paginationHTML = `
+                        <div class="mt-4 flex justify-between items-center">
+                            <span class="text-sm text-gray-700">Halaman ${modalState.currentPage} dari ${totalPages}</span>
+                            <div class="flex items-center gap-2">
+                                <button data-page="${modalState.currentPage - 1}" class="modal-pagination-btn" ${modalState.currentPage === 1 ? 'disabled' : ''}>Sebelumnya</button>
+                                <button data-page="${modalState.currentPage + 1}" class="modal-pagination-btn" ${modalState.currentPage === totalPages ? 'disabled' : ''}>Berikutnya</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                modalContent.innerHTML = controlsHTML + tableHTML + paginationHTML;
+
+                // Add Download Button to Footer
+                modalFooter.innerHTML = `
+                    <button id="modal-download-excel" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                        Unduh Excel
+                    </button>
+                    <button class="modal-close-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">Tutup</button>
+                `;
+
+                // Add event listeners for modal controls
+                addModalEventListeners();
+            }
+
+            function addModalEventListeners() {
+                // Search
+                const modalSearch = document.getElementById('modal-search');
+                if(modalSearch) {
+                    modalSearch.value = modalState.searchTerm;
+                    modalSearch.addEventListener('input', (e) => {
+                        modalState.searchTerm = e.target.value.toLowerCase();
+                        applyModalFiltersAndRender();
+                    });
+                }
+
+                // Filters
+                const modalFilterJenjang = document.getElementById('modal-filter-jenjang');
+                if(modalFilterJenjang) {
+                    modalFilterJenjang.value = modalState.jenjang;
+                    modalFilterJenjang.addEventListener('change', (e) => {
+                        modalState.jenjang = e.target.value;
+                        applyModalFiltersAndRender();
+                    });
+                }
+                const modalFilterKecamatan = document.getElementById('modal-filter-kecamatan');
+                if(modalFilterKecamatan) {
+                    modalFilterKecamatan.value = modalState.kecamatan;
+                    modalFilterKecamatan.addEventListener('change', (e) => {
+                        modalState.kecamatan = e.target.value;
+                        applyModalFiltersAndRender();
+                    });
+                }
+                
+                // Pagination
+                document.querySelectorAll('.modal-pagination-btn').forEach(btn => {
+                    btn.classList.add('px-4', 'py-2', 'text-sm', 'font-medium', 'text-gray-700', 'bg-white', 'border', 'border-gray-300', 'rounded-md', 'hover:bg-gray-50', 'disabled:opacity-50', 'disabled:cursor-not-allowed');
+                    btn.addEventListener('click', (e) => {
+                        modalState.currentPage = parseInt(e.target.dataset.page);
+                        renderModalContent();
+                    });
+                });
+
+                // Excel Download
+                const modalDownloadBtn = document.getElementById('modal-download-excel');
+                if(modalDownloadBtn) {
+                    modalDownloadBtn.addEventListener('click', () => {
+                        const worksheet = XLSX.utils.json_to_sheet(modalState.filteredData);
+                        const workbook = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(workbook, worksheet, "Data Detail");
+                        XLSX.writeFile(workbook, `Laporan_Detail_${modalTitle.textContent}.xlsx`);
+                    });
+                }
+            }
+
+
+            // --- FUNGSI PEMBANTU ---
+
+            function populateFilters() {
+                const kecamatans = [...new Set(allData.map(row => row['Kecamatan']).filter(Boolean))].sort();
+                filterKecamatan.innerHTML = '<option value="">Semua Kecamatan</option>';
+                kecamatans.forEach(k => {
+                    const option = document.createElement('option');
+                    option.value = k;
+                    option.textContent = k;
+                    filterKecamatan.appendChild(option);
+                });
             }
 
             function parseCSV(text) {
@@ -188,130 +641,125 @@
                     return obj;
                 });
             }
-
-            function renderTable(data, filterText = '') {
-                if (!data || data.length === 0) {
-                    tableHead.innerHTML = '<th scope="col" class="px-6 py-3">Informasi</th>';
-                    tableBody.innerHTML = '<tr><td class="px-6 py-4 text-center">Tidak ada data untuk ditampilkan.</td></tr>';
-                    noDataMessage.classList.add('hidden');
-                    return;
-                }
-                
-                const headers = Object.keys(data[0]);
-                tableHead.innerHTML = headers.map(h => `<th scope="col" class="px-6 py-3">${h}</th>`).join('');
-                
-                const lowerCaseFilter = filterText.toLowerCase();
-                const filteredData = data.filter(row => {
-                    const namaSekolah = (row['NAMA SATUAN PENDIDIKAN'] || '').toLowerCase();
-                    const npsn = (row['NPSN'] || '').toString().toLowerCase();
-                    return namaSekolah.includes(lowerCaseFilter) || npsn.includes(lowerCaseFilter);
-                });
-
-                if (filteredData.length === 0) {
-                    tableBody.innerHTML = '';
-                    noDataMessage.classList.remove('hidden');
-                } else {
-                    noDataMessage.classList.add('hidden');
-                    tableBody.innerHTML = filteredData.map(row => `<tr>${
-                        headers.map(header => {
-                            let content = row[header];
-                            if (header.toLowerCase() === 'keterangan') { // Diubah dari 'status' ke 'keterangan'
-                                const isFilled = content.toLowerCase().includes('sudah') || content.toLowerCase().includes('selesai');
-                                const bgColor = isFilled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-                                return `<td class="px-6 py-4"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${bgColor}">${content || 'Belum'}</span></td>`;
-                            }
-                            return `<td class="px-6 py-4 whitespace-nowrap">${content}</td>`;
-                        }).join('')
-                    }</tr>`).join('');
-                }
-            }
-
-            function updateSummary(data) {
-                if (!data || data.length === 0) {
-                    totalSekolahEl.textContent = 0;
-                    sudahMengisiEl.textContent = 0;
-                    belumMengisiEl.textContent = 0;
-                    return;
-                }
-                const total = data.length;
-                const sudah = data.filter(row => {
-                    const status = row['Keterangan'] || ''; // Diubah dari 'Status' ke 'Keterangan'
-                    return status.toLowerCase().includes('sudah') || status.toLowerCase().includes('selesai');
-                }).length;
-                const belum = total - sudah;
-
-                totalSekolahEl.textContent = total;
-                sudahMengisiEl.textContent = sudah;
-                belumMengisiEl.textContent = belum;
-            }
             
             function showLoader(isLoading) {
                 loader.style.display = isLoading ? 'flex' : 'none';
                 dataContainer.style.display = isLoading ? 'none' : 'block';
             }
-
-            async function updateView() {
-                const gid = SHEET_CONFIG[activeTipe]?.[activeJenjang];
-                if (!gid && gid !== "0") { // Ditambahkan pengecekan untuk gid "0"
-                    console.error(`Konfigurasi tidak ditemukan untuk Tipe: ${activeTipe}, Jenjang: ${activeJenjang}`);
-                    return;
-                }
-
-                updateTabsUI();
-                const cacheKey = `${activeTipe}-${activeJenjang}`;
-                const data = await fetchData(gid, cacheKey);
-                updateSummary(data);
-                renderTable(data, searchInput.value);
+            
+            function openModal() {
+                detailModal.classList.remove('opacity-0', 'pointer-events-none');
+                detailModal.querySelector('.modal-container').classList.remove('scale-95');
             }
 
-            function updateTabsUI() {
-                document.querySelectorAll('.tipe-button').forEach(button => {
-                    button.classList.toggle('bg-blue-500', button.dataset.tipe === activeTipe);
-                    button.classList.toggle('text-white', button.dataset.tipe === activeTipe);
-                    button.classList.toggle('shadow-sm', button.dataset.tipe === activeTipe);
-                    button.classList.toggle('bg-gray-200', button.dataset.tipe !== activeTipe);
-                    button.classList.toggle('text-gray-700', button.dataset.tipe !== activeTipe);
-                });
-                document.querySelectorAll('.jenjang-button').forEach(button => {
-                    button.classList.toggle('bg-blue-500', button.dataset.jenjang === activeJenjang);
-                    button.classList.toggle('text-white', button.dataset.jenjang === activeJenjang);
-                    button.classList.toggle('shadow-sm', button.dataset.jenjang === activeJenjang);
-                    button.classList.toggle('bg-gray-200', button.dataset.jenjang !== activeJenjang);
-                    button.classList.toggle('text-gray-700', button.dataset.jenjang !== activeJenjang);
-                });
+            function closeModal() {
+                detailModal.classList.add('opacity-0', 'pointer-events-none');
+                detailModal.querySelector('.modal-container').classList.add('scale-95');
             }
-
+            
             // --- EVENT LISTENERS ---
-            tipeTabsContainer.addEventListener('click', (e) => {
-                if (e.target.classList.contains('tipe-button')) {
-                    const tipe = e.target.dataset.tipe;
-                    if (tipe !== activeTipe) {
-                        activeTipe = tipe;
-                        updateView();
+
+            function addEventListeners() {
+                document.querySelectorAll('.filter-input').forEach(input => {
+                    input.addEventListener('change', async (e) => {
+                        const filterName = e.target.id.split('-')[1];
+                        state[filterName] = e.target.value;
+                        if (filterName === 'tipe') {
+                            await loadDataForCurrentTipe();
+                            populateFilters();
+                        }
+                        applyFiltersAndRender();
+                    });
+                });
+                
+                searchInput.addEventListener('input', (e) => {
+                    state.searchTerm = e.target.value.toLowerCase();
+                    applyFiltersAndRender();
+                });
+
+                paginationControls.addEventListener('click', (e) => {
+                    if (e.target.matches('.pagination-btn')) {
+                        currentPage = parseInt(e.target.dataset.page);
+                        renderTable();
+                        updatePagination();
                     }
-                }
-            });
-
-            jenjangTabsContainer.addEventListener('click', (e) => {
-                if (e.target.classList.contains('jenjang-button')) {
-                    const jenjang = e.target.dataset.jenjang;
-                    if (jenjang !== activeJenjang) {
-                        activeJenjang = jenjang;
-                        updateView();
+                });
+                
+                tableBody.addEventListener('click', (e) => {
+                    const row = e.target.closest('tr');
+                    if (!row) return;
+                    const dataIndex = row.dataset.index;
+                    const schoolData = filteredData[dataIndex];
+                    if (!schoolData) return;
+                    
+                    modalTitle.textContent = schoolData['Nama Satuan Pendidikan'];
+                    let contentHTML = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">';
+                    for (const key in schoolData) {
+                        contentHTML += `
+                            <div>
+                                <p class="font-semibold text-gray-500">${key}</p>
+                                <p>${schoolData[key] || '-'}</p>
+                            </div>
+                        `;
                     }
-                }
-            });
+                    contentHTML += '</div>';
+                    modalContent.innerHTML = contentHTML;
+                    modalFooter.innerHTML = `<button class="modal-close-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">Tutup</button>`;
+                    openModal();
+                });
+                
+                document.querySelectorAll('.summary-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        const statusFilter = e.currentTarget.dataset.statusFilter;
+                        const dataToShow = filteredData.filter(row => {
+                           if (statusFilter === 'semua') return true;
+                           const status = (row['Keterangan'] || '').toLowerCase();
+                           const isSudah = status.includes('sudah') || status.includes('selesai');
+                           return (statusFilter === 'sudah' && isSudah) || (statusFilter === 'belum' && !isSudah);
+                        });
+                        
+                        const title = `Daftar Sekolah (${statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)})`;
+                        openCardModal(dataToShow, title);
+                    });
+                });
 
-            searchInput.addEventListener('input', () => {
-                const cacheKey = `${activeTipe}-${activeJenjang}`;
-                const currentData = dataCache[cacheKey] || [];
-                renderTable(currentData, searchInput.value);
-            });
+                detailModal.addEventListener('click', (e) => {
+                    if (e.target.matches('.modal-overlay') || e.target.matches('.modal-close-btn') || e.target.closest('.modal-close-btn')) {
+                        closeModal();
+                    }
+                });
 
-            // --- INISIALISASI ---
-            updateView();
+                downloadExcelBtn.addEventListener('click', () => {
+                    const worksheet = XLSX.utils.json_to_sheet(filteredData);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+                    XLSX.writeFile(workbook, "Laporan_Status_Penginputan.xlsx");
+                });
+
+                shareWhatsappBtn.addEventListener('click', () => {
+                    const total = totalSekolahEl.textContent;
+                    const sudah = sudahMengisiEl.textContent;
+                    const belum = belumMengisiEl.textContent;
+                    let summary = `*Ringkasan Status Penginputan Data*\n\n`;
+                    summary += `Tipe: ${state.tipe}\n`;
+                    summary += `Total Sekolah: ${total}\n`;
+                    summary += `Sudah Mengisi: ${sudah}\n`;
+                    summary += `Belum Mengisi: ${belum}\n\n`;
+                    summary += `*Filter Aktif:*\n`;
+                    summary += `Jenjang: ${state.jenjang || 'Semua'}\n`;
+                    summary += `Kecamatan: ${state.kecamatan || 'Semua'}\n`;
+                    summary += `Keterangan: ${state.keterangan || 'Semua'}\n`;
+
+                    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(summary)}`;
+                    window.open(whatsappUrl, '_blank');
+                });
+            }
+
+            // --- INISIALISASI APLIKASI ---
+            initializeApp();
         });
     </script>
 </body>
 </html>
+
 
