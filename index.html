@@ -129,6 +129,54 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Ringkasan Responden -->
+        <div class="row g-4 mb-5">
+            <div class="col-6 col-md-3">
+                <div data-responden-filter="Pengawas" class="responden-card card-custom p-3 d-flex flex-row align-items-center gap-3 cursor-pointer">
+                    <div class="icon-circle bg-info bg-opacity-10 rounded-circle">
+                        <i class="bi bi-person-video3 fs-5 text-info"></i>
+                    </div>
+                    <div>
+                        <p class="small text-secondary mb-0">Pengawas</p>
+                        <p id="responden-pengawas" class="h5 fw-bold mb-0">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div data-responden-filter="Kepala Sekolah" class="responden-card card-custom p-3 d-flex flex-row align-items-center gap-3 cursor-pointer">
+                    <div class="icon-circle bg-warning bg-opacity-10 rounded-circle">
+                        <i class="bi bi-person-badge fs-5 text-warning"></i>
+                    </div>
+                    <div>
+                        <p class="small text-secondary mb-0">Kepala Sekolah</p>
+                        <p id="responden-kepsek" class="h5 fw-bold mb-0">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div data-responden-filter="Guru" class="responden-card card-custom p-3 d-flex flex-row align-items-center gap-3 cursor-pointer">
+                    <div class="icon-circle bg-success bg-opacity-10 rounded-circle">
+                        <i class="bi bi-people fs-5 text-success"></i>
+                    </div>
+                    <div>
+                        <p class="small text-secondary mb-0">Guru</p>
+                        <p id="responden-guru" class="h5 fw-bold mb-0">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div data-responden-filter="Komite Sekolah" class="responden-card card-custom p-3 d-flex flex-row align-items-center gap-3 cursor-pointer">
+                    <div class="icon-circle bg-secondary bg-opacity-10 rounded-circle">
+                        <i class="bi bi-person-workspace fs-5 text-secondary"></i>
+                    </div>
+                    <div>
+                        <p class="small text-secondary mb-0">Komite Sekolah</p>
+                        <p id="responden-komite" class="h5 fw-bold mb-0">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Grafik -->
         <div class="row g-4 mb-5">
@@ -204,10 +252,10 @@
         </div>
 
         <!-- Tabel Data -->
-        <div id="loader-container" class="d-flex justify-content-center align-items-center py-5">
+        <div id="loader-container" class="d-flex justify-content-center align-items-center py-5 d-none">
             <div class="loader"></div>
         </div>
-        <div id="data-container" class="card-custom overflow-hidden d-none">
+        <div id="data-container" class="card-custom overflow-hidden">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
@@ -355,6 +403,11 @@
             const totalSekolahEl = document.getElementById('total-sekolah');
             const sudahMengisiEl = document.getElementById('sudah-mengisi');
             const belumMengisiEl = document.getElementById('belum-mengisi');
+
+            const respondenPengawasEl = document.getElementById('responden-pengawas');
+            const respondenKepsekEl = document.getElementById('responden-kepsek');
+            const respondenGuruEl = document.getElementById('responden-guru');
+            const respondenKomiteEl = document.getElementById('responden-komite');
             
             // Desktop Filters
             const desktopFilters = {
@@ -426,7 +479,7 @@
             async function loadDataForTipe(tipe, showLoaderFlag) {
                 if(showLoaderFlag) showLoader(true);
                 const jenjangs = ['SD', 'SMP', 'PNF'];
-                let combinedData = [];
+                let promises = [];
 
                 for (const jenjang of jenjangs) {
                     const cacheKey = `${tipe}-${jenjang}`;
@@ -436,17 +489,23 @@
                     const gid = SHEET_CONFIG[tipe]?.[jenjang];
                     if (gid || gid === "0") {
                         const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
-                        try {
-                            const response = await fetch(url);
-                            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                            const csvText = await response.text();
-                            const parsedData = parseCSV(csvText).map(row => ({...row, Jenjang: jenjang }));
-                            rawDataCache[cacheKey] = parsedData;
-                        } catch (error) {
-                            console.error(`Gagal mengambil data untuk ${tipe} - ${jenjang}:`, error);
-                        }
+                        promises.push(
+                            fetch(url)
+                                .then(response => {
+                                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                                    return response.text();
+                                })
+                                .then(csvText => {
+                                    const parsedData = parseCSV(csvText).map(row => ({...row, Jenjang: jenjang }));
+                                    rawDataCache[cacheKey] = parsedData;
+                                })
+                                .catch(error => {
+                                    console.error(`Gagal mengambil data untuk ${tipe} - ${jenjang}:`, error);
+                                })
+                        );
                     }
                 }
+                await Promise.all(promises);
                 if(showLoaderFlag) showLoader(false);
             }
             
@@ -494,6 +553,7 @@
 
             function updateDashboard() {
                 updateSummaryCards();
+                updateRespondentSummary();
                 updateCharts();
                 renderTable();
                 updatePagination();
@@ -513,6 +573,23 @@
                 totalSekolahEl.textContent = total;
                 sudahMengisiEl.textContent = sudah;
                 belumMengisiEl.textContent = belum;
+            }
+            
+            function updateRespondentSummary() {
+                const initialCounts = { pengawas: 0, kepsek: 0, guru: 0, komite: 0 };
+
+                const counts = filteredData.reduce((acc, row) => {
+                    acc.pengawas += parseInt(row['Pengawas']) || 0;
+                    acc.kepsek += parseInt(row['Kepala Sekolah']) || 0;
+                    acc.guru += parseInt(row['Guru']) || 0;
+                    acc.komite += parseInt(row['Komite Sekolah']) || 0;
+                    return acc;
+                }, initialCounts);
+
+                respondenPengawasEl.textContent = counts.pengawas;
+                respondenKepsekEl.textContent = counts.kepsek;
+                respondenGuruEl.textContent = counts.guru;
+                respondenKomiteEl.textContent = counts.komite;
             }
 
             function renderTable() {
@@ -958,6 +1035,18 @@
                         });
                         
                         const title = `Daftar Sekolah (${statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)})`;
+                        openCardModal(dataToShow, title);
+                    });
+                });
+                
+                document.querySelectorAll('.responden-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        const respondenFilter = e.currentTarget.dataset.respondenFilter;
+                        const dataToShow = filteredData.filter(row => {
+                           return (parseInt(row[respondenFilter]) || 0) > 0;
+                        });
+                        
+                        const title = `Daftar Sekolah (Responden: ${respondenFilter})`;
                         openCardModal(dataToShow, title);
                     });
                 });
