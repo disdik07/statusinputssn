@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dasbor Status Penginputan Data</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Animasi sederhana untuk loader */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Dasbor Status Penginputan Data</h1>
+            <p class="text-gray-600 mt-2">Memantau progres input data sekolah secara real-time.</p>
+        </header>
+
+        <!-- Ringkasan Statistik -->
+        <div id="summary-section" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-md flex items-center space-x-4">
+                <div class="bg-blue-100 p-3 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Total Sekolah</p>
+                    <p id="total-sekolah" class="text-2xl font-bold">0</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md flex items-center space-x-4">
+                <div class="bg-green-100 p-3 rounded-full">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Sudah Mengisi</p>
+                    <p id="sudah-mengisi" class="text-2xl font-bold">0</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md flex items-center space-x-4">
+                <div class="bg-red-100 p-3 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Belum Mengisi</p>
+                    <p id="belum-mengisi" class="text-2xl font-bold">0</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Kontrol dan Filter -->
+        <div class="bg-white p-4 rounded-xl shadow-md mb-6 space-y-4">
+            <!-- Tipe Penginputan -->
+            <div>
+                <label class="text-sm font-medium text-gray-700 mb-2 block">Pilih Tipe Penginputan:</label>
+                <div id="tipe-tabs" class="flex flex-wrap gap-2">
+                    <button data-tipe="Kuesioner" class="tipe-button bg-blue-500 text-white px-4 py-2 text-sm font-semibold rounded-lg shadow-sm">Kuesioner</button>
+                    <button data-tipe="Data Dukung" class="tipe-button bg-gray-200 text-gray-700 px-4 py-2 text-sm font-semibold rounded-lg">Data Dukung</button>
+                </div>
+            </div>
+             <!-- Jenjang dan Pencarian -->
+            <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                <div id="jenjang-tabs" class="flex flex-wrap gap-2">
+                    <button data-jenjang="SD" class="jenjang-button bg-blue-500 text-white px-4 py-2 text-sm font-semibold rounded-lg shadow-sm">SD</button>
+                    <button data-jenjang="SMP" class="jenjang-button bg-gray-200 text-gray-700 px-4 py-2 text-sm font-semibold rounded-lg">SMP</button>
+                    <button data-jenjang="PNF" class="jenjang-button bg-gray-200 text-gray-700 px-4 py-2 text-sm font-semibold rounded-lg">PNF</button>
+                </div>
+                <div class="relative">
+                     <input type="text" id="search-input" placeholder="Cari nama sekolah atau NPSN..." class="pl-10 pr-4 py-2 w-full md:w-64 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                         <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabel Data -->
+        <div id="loader-container" class="flex justify-center items-center py-16">
+            <div class="loader"></div>
+        </div>
+        <div id="data-container" class="bg-white rounded-xl shadow-md overflow-hidden hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                            <!-- Header tabel akan di-generate oleh JavaScript -->
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        <!-- Isi tabel akan di-generate oleh JavaScript -->
+                    </tbody>
+                </table>
+                 <div id="no-data" class="hidden text-center py-16">
+                    <p class="text-gray-500 font-semibold">Data tidak ditemukan.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- KONFIGURASI ---
+            const SPREADSHEET_ID = '1xlT6AG93O9f8lpJ2jnyT8Uo38Caeu45krO-lm5Ovu-U';
+            const SHEET_CONFIG = {
+                'Kuesioner': {
+                    'PNF': '0',
+                    'SD': '1383442645',
+                    'SMP': '495422266'
+                },
+                'Data Dukung': {
+                    'PNF': '1825691308',
+                    'SD': '64127203',
+                    'SMP': '680971269'
+                }
+            };
+
+            // --- ELEMEN DOM ---
+            const tipeTabsContainer = document.getElementById('tipe-tabs');
+            const jenjangTabsContainer = document.getElementById('jenjang-tabs');
+            const searchInput = document.getElementById('search-input');
+            const tableHead = document.querySelector('table thead tr');
+            const tableBody = document.querySelector('table tbody');
+            const loader = document.getElementById('loader-container');
+            const dataContainer = document.getElementById('data-container');
+            const noDataMessage = document.getElementById('no-data');
+            const totalSekolahEl = document.getElementById('total-sekolah');
+            const sudahMengisiEl = document.getElementById('sudah-mengisi');
+            const belumMengisiEl = document.getElementById('belum-mengisi');
+
+            // --- STATE APLIKASI ---
+            let activeTipe = 'Kuesioner';
+            let activeJenjang = 'SD';
+            let dataCache = {};
+
+            // --- FUNGSI-FUNGSI ---
+            async function fetchData(gid, cacheKey) {
+                if (dataCache[cacheKey]) {
+                    return dataCache[cacheKey];
+                }
+
+                showLoader(true);
+                const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
+                
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const csvText = await response.text();
+                    const parsedData = parseCSV(csvText);
+                    dataCache[cacheKey] = parsedData;
+                    return parsedData;
+                } catch (error) {
+                    console.error('Gagal mengambil data:', error);
+                    alert('Tidak dapat memuat data. Periksa koneksi internet Anda atau pastikan Google Sheet dapat diakses publik.');
+                    return [];
+                } finally {
+                    showLoader(false);
+                }
+            }
+
+            function parseCSV(text) {
+                const lines = text.trim().split('\n');
+                if (lines.length < 2) return [];
+                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                return lines.slice(1).map(line => {
+                    const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/"/g, ''));
+                    let obj = {};
+                    headers.forEach((header, i) => { obj[header] = values[i] || ''; });
+                    return obj;
+                });
+            }
+
+            function renderTable(data, filterText = '') {
+                if (!data || data.length === 0) {
+                    tableHead.innerHTML = '<th scope="col" class="px-6 py-3">Informasi</th>';
+                    tableBody.innerHTML = '<tr><td class="px-6 py-4 text-center">Tidak ada data untuk ditampilkan.</td></tr>';
+                    noDataMessage.classList.add('hidden');
+                    return;
+                }
+                
+                const headers = Object.keys(data[0]);
+                tableHead.innerHTML = headers.map(h => `<th scope="col" class="px-6 py-3">${h}</th>`).join('');
+                
+                const lowerCaseFilter = filterText.toLowerCase();
+                const filteredData = data.filter(row => {
+                    const namaSekolah = (row['NAMA SATUAN PENDIDIKAN'] || '').toLowerCase();
+                    const npsn = (row['NPSN'] || '').toString().toLowerCase();
+                    return namaSekolah.includes(lowerCaseFilter) || npsn.includes(lowerCaseFilter);
+                });
+
+                if (filteredData.length === 0) {
+                    tableBody.innerHTML = '';
+                    noDataMessage.classList.remove('hidden');
+                } else {
+                    noDataMessage.classList.add('hidden');
+                    tableBody.innerHTML = filteredData.map(row => `<tr>${
+                        headers.map(header => {
+                            let content = row[header];
+                            if (header.toLowerCase() === 'keterangan') { // Diubah dari 'status' ke 'keterangan'
+                                const isFilled = content.toLowerCase().includes('sudah') || content.toLowerCase().includes('selesai');
+                                const bgColor = isFilled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                                return `<td class="px-6 py-4"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${bgColor}">${content || 'Belum'}</span></td>`;
+                            }
+                            return `<td class="px-6 py-4 whitespace-nowrap">${content}</td>`;
+                        }).join('')
+                    }</tr>`).join('');
+                }
+            }
+
+            function updateSummary(data) {
+                if (!data || data.length === 0) {
+                    totalSekolahEl.textContent = 0;
+                    sudahMengisiEl.textContent = 0;
+                    belumMengisiEl.textContent = 0;
+                    return;
+                }
+                const total = data.length;
+                const sudah = data.filter(row => {
+                    const status = row['Keterangan'] || ''; // Diubah dari 'Status' ke 'Keterangan'
+                    return status.toLowerCase().includes('sudah') || status.toLowerCase().includes('selesai');
+                }).length;
+                const belum = total - sudah;
+
+                totalSekolahEl.textContent = total;
+                sudahMengisiEl.textContent = sudah;
+                belumMengisiEl.textContent = belum;
+            }
+            
+            function showLoader(isLoading) {
+                loader.style.display = isLoading ? 'flex' : 'none';
+                dataContainer.style.display = isLoading ? 'none' : 'block';
+            }
+
+            async function updateView() {
+                const gid = SHEET_CONFIG[activeTipe]?.[activeJenjang];
+                if (!gid) {
+                    console.error(`Konfigurasi tidak ditemukan untuk Tipe: ${activeTipe}, Jenjang: ${activeJenjang}`);
+                    return;
+                }
+
+                updateTabsUI();
+                const cacheKey = `${activeTipe}-${activeJenjang}`;
+                const data = await fetchData(gid, cacheKey);
+                updateSummary(data);
+                renderTable(data, searchInput.value);
+            }
+
+            function updateTabsUI() {
+                document.querySelectorAll('.tipe-button').forEach(button => {
+                    button.classList.toggle('bg-blue-500', button.dataset.tipe === activeTipe);
+                    button.classList.toggle('text-white', button.dataset.tipe === activeTipe);
+                    button.classList.toggle('shadow-sm', button.dataset.tipe === activeTipe);
+                    button.classList.toggle('bg-gray-200', button.dataset.tipe !== activeTipe);
+                    button.classList.toggle('text-gray-700', button.dataset.tipe !== activeTipe);
+                });
+                document.querySelectorAll('.jenjang-button').forEach(button => {
+                    button.classList.toggle('bg-blue-500', button.dataset.jenjang === activeJenjang);
+                    button.classList.toggle('text-white', button.dataset.jenjang === activeJenjang);
+                    button.classList.toggle('shadow-sm', button.dataset.jenjang === activeJenjang);
+                    button.classList.toggle('bg-gray-200', button.dataset.jenjang !== activeJenjang);
+                    button.classList.toggle('text-gray-700', button.dataset.jenjang !== activeJenjang);
+                });
+            }
+
+            // --- EVENT LISTENERS ---
+            tipeTabsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('tipe-button')) {
+                    const tipe = e.target.dataset.tipe;
+                    if (tipe !== activeTipe) {
+                        activeTipe = tipe;
+                        updateView();
+                    }
+                }
+            });
+
+            jenjangTabsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('jenjang-button')) {
+                    const jenjang = e.target.dataset.jenjang;
+                    if (jenjang !== activeJenjang) {
+                        activeJenjang = jenjang;
+                        updateView();
+                    }
+                }
+            });
+
+            searchInput.addEventListener('input', () => {
+                const cacheKey = `${activeTipe}-${activeJenjang}`;
+                const currentData = dataCache[cacheKey] || [];
+                renderTable(currentData, searchInput.value);
+            });
+
+            // --- INISIALISASI ---
+            updateView();
+        });
+    </script>
+</body>
+</html>
+
