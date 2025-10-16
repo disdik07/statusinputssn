@@ -130,20 +130,9 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- KONFIGURASI ---
-            const SPREADSHEET_ID = '1xlT6AG93O9f8lpJ2jnyT8Uo38Caeu45krO-lm5Ovu-U';
-            const SHEET_CONFIG = {
-                'Kuesioner': {
-                    'PNF': '0',
-                    'SD': '1383442645',
-                    'SMP': '495422266'
-                },
-                'Data Dukung': {
-                    'PNF': '1825691308',
-                    'SD': '64127203',
-                    'SMP': '680971269'
-                }
-            };
+            // --- KONFIGURASI (Disamarkan) ---
+            const SPREADSHEET_ID = atob('MXhsVDZBRzkzTzlmOGxwSjJqbnlUOFVvMzhDYWV1NDVrck8tbG01T3Z1LVU=');
+            const SHEET_CONFIG = JSON.parse(atob('eyJLdWVzaW9uZXIiOnsiUE5GIjoiMCIsIlNEIjoiMTM4MzQ0MjY0NSIsIlNNUCI6IjQ5NTQyMjI2NiJ9LCJEYXRhIER1a3VuZyI6eyJQTkYiOiIxODI1NjkxMzA4IiwiU0QiOiI2NDEyNzIwMyIsIlNNUCI6IjY4MDk3MTI2OSJ9fQ=='));
 
             // --- ELEMEN DOM ---
             const tipeTabsContainer = document.getElementById('tipe-tabs');
@@ -263,7 +252,7 @@
 
             async function updateView() {
                 const gid = SHEET_CONFIG[activeTipe]?.[activeJenjang];
-                if (!gid) {
+                if (!gid && gid !== "0") { // Ditambahkan pengecekan untuk gid "0"
                     console.error(`Konfigurasi tidak ditemukan untuk Tipe: ${activeTipe}, Jenjang: ${activeJenjang}`);
                     return;
                 }
