@@ -18,14 +18,17 @@
     <style>
         body {
             font-family: 'Poppins', sans-serif;
-            background-color: #f8f9fa; /* Bootstrap bg-light */
+            background-color: #f8f9fa;
         }
         .loader {
             border: 4px solid #f3f3f3;
-            border-top: 4px solid #0d6efd; /* Bootstrap primary */
+            border-top: 4px solid #0d6efd;
             border-radius: 50%;
             width: 40px;
             height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        .spinning {
             animation: spin 1s linear infinite;
         }
         @keyframes spin {
@@ -52,6 +55,32 @@
             justify-content: center;
         }
 
+        /* Sidebar Styles */
+        #sidebar {
+            width: 280px;
+            background: #ffffff;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+            transition: margin-left 0.3s ease-in-out;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+        #main-content {
+            width: calc(100% - 280px);
+            margin-left: 280px;
+            transition: width 0.3s ease-in-out, margin-left 0.3s ease-in-out;
+        }
+        
+        #sidebar.collapsed {
+            margin-left: -280px;
+        }
+        #main-content.expanded {
+            width: 100%;
+            margin-left: 0;
+        }
+        
         /* Modal Styles */
         .modal-overlay {
             transition: opacity 0.3s ease;
@@ -62,7 +91,7 @@
         }
         
         .clickable-row:hover {
-            background-color: #f1f3f5; /* gray-200 */
+            background-color: #f1f3f5;
             cursor: pointer;
         }
         
@@ -77,138 +106,55 @@
             z-index: 1000;
         }
         
-        /* Adjust main content padding for mobile nav */
+        @media (max-width: 992px) { /* Changed breakpoint to lg */
+            #sidebar {
+                display: none !important;
+            }
+            #main-content {
+                width: 100%;
+                margin-left: 0;
+            }
+            #main-content.expanded { /* pastikan tetap 100% di mobile */
+                 width: 100%;
+                 margin-left: 0;
+            }
+        }
+        
+        @media (min-width: 992.02px) {
+            .modal-overlay {
+                left: 0; /* Selalu mulai dari kiri */
+            }
+             #main-content.expanded .modal-overlay {
+                padding-left: 0;
+            }
+        }
+        
         @media (max-width: 768px) {
-            body {
+             body {
                 padding-bottom: 80px; /* Space for the bottom nav */
             }
         }
     </style>
 </head>
 <body class="text-gray-800">
-
-    <div class="container-fluid p-4 md:p-5">
-        <header class="text-center mb-5">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Dasbor Interaktif Penginputan Data</h1>
-            <p class="text-secondary mt-2">Memantau progres input data sekolah secara real-time.</p>
-        </header>
-
-        <!-- Ringkasan Statistik (Clickable Cards) -->
-        <div id="summary-section" class="row g-4 mb-5">
-            <div class="col-md-4">
-                <div data-status-filter="semua" class="summary-card card-custom p-4 d-flex flex-row align-items-center gap-4 cursor-pointer">
-                    <div class="icon-circle bg-primary bg-opacity-10 p-3 rounded-circle">
-                        <i class="bi bi-bank2 fs-4 text-primary"></i>
-                    </div>
-                    <div>
-                        <p class="text-sm text-secondary mb-0">Total Sekolah</p>
-                        <p id="total-sekolah" class="h4 fw-bold mb-0">0</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div data-status-filter="sudah" class="summary-card card-custom p-4 d-flex flex-row align-items-center gap-4 cursor-pointer">
-                    <div class="icon-circle bg-success bg-opacity-10 p-3 rounded-circle">
-                         <i class="bi bi-check-circle-fill fs-4 text-success"></i>
-                    </div>
-                    <div>
-                        <p class="text-sm text-secondary mb-0">Sudah Mengisi</p>
-                        <p id="sudah-mengisi" class="h4 fw-bold mb-0">0</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                 <div data-status-filter="belum" class="summary-card card-custom p-4 d-flex flex-row align-items-center gap-4 cursor-pointer">
-                    <div class="icon-circle bg-danger bg-opacity-10 p-3 rounded-circle">
-                        <i class="bi bi-x-circle-fill fs-4 text-danger"></i>
-                    </div>
-                    <div>
-                        <p class="text-sm text-secondary mb-0">Belum Mengisi</p>
-                        <p id="belum-mengisi" class="h4 fw-bold mb-0">0</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Ringkasan Responden -->
-        <div class="row g-4 mb-5">
-            <div class="col-6 col-md-3">
-                <div data-responden-filter="Pengawas" class="responden-card card-custom p-3 d-flex flex-row align-items-center gap-3 cursor-pointer">
-                    <div class="icon-circle bg-info bg-opacity-10 rounded-circle">
-                        <i class="bi bi-person-video3 fs-5 text-info"></i>
-                    </div>
-                    <div>
-                        <p class="small text-secondary mb-0">Pengawas</p>
-                        <p id="responden-pengawas" class="h5 fw-bold mb-0">0</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div data-responden-filter="Kepala Sekolah" class="responden-card card-custom p-3 d-flex flex-row align-items-center gap-3 cursor-pointer">
-                    <div class="icon-circle bg-warning bg-opacity-10 rounded-circle">
-                        <i class="bi bi-person-badge fs-5 text-warning"></i>
-                    </div>
-                    <div>
-                        <p class="small text-secondary mb-0">Kepala Sekolah</p>
-                        <p id="responden-kepsek" class="h5 fw-bold mb-0">0</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div data-responden-filter="Guru" class="responden-card card-custom p-3 d-flex flex-row align-items-center gap-3 cursor-pointer">
-                    <div class="icon-circle bg-success bg-opacity-10 rounded-circle">
-                        <i class="bi bi-people fs-5 text-success"></i>
-                    </div>
-                    <div>
-                        <p class="small text-secondary mb-0">Guru</p>
-                        <p id="responden-guru" class="h5 fw-bold mb-0">0</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div data-responden-filter="Komite Sekolah" class="responden-card card-custom p-3 d-flex flex-row align-items-center gap-3 cursor-pointer">
-                    <div class="icon-circle bg-secondary bg-opacity-10 rounded-circle">
-                        <i class="bi bi-person-workspace fs-5 text-secondary"></i>
-                    </div>
-                    <div>
-                        <p class="small text-secondary mb-0">Komite Sekolah</p>
-                        <p id="responden-komite" class="h5 fw-bold mb-0">0</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Grafik -->
-        <div class="row g-4 mb-5">
-            <div class="col-lg-6">
-                <div class="card-custom p-4">
-                    <h3 class="font-semibold mb-3 text-center">Data per Kecamatan</h3>
-                    <div class="position-relative" style="height: 320px;">
-                        <canvas id="kecamatanChart"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                 <div class="card-custom p-4">
-                    <h3 class="font-semibold mb-3 text-center">Data per Jenjang</h3>
-                    <div class="position-relative" style="height: 320px;">
-                        <canvas id="jenjangChart"></canvas>
-                    </div>
-                </div>
-            </div>
+    
+    <!-- Sidebar -->
+    <nav id="sidebar" class="d-none d-lg-flex flex-column p-4">
+        <div class="sidebar-header d-flex justify-content-between align-items-center pb-4 mb-4 border-bottom">
+            <h3 class="fw-bold fs-4 mb-0"><i class="bi bi-bar-chart-line-fill text-primary"></i> Dasbor Data</h3>
         </div>
         
         <!-- Kontrol dan Filter (Desktop) -->
-        <div class="d-none d-md-block card-custom p-4 mb-5">
+        <div class="flex-grow-1">
              <div class="row g-3">
-                <div class="col-lg-3">
+                <div class="col-12">
                     <label for="filter-tipe" class="form-label small fw-medium">Tipe Input</label>
                     <select id="filter-tipe" class="filter-input form-select">
                         <option value="Kuesioner">Kuesioner</option>
                         <option value="Data Dukung">Data Dukung</option>
                     </select>
                 </div>
-                <div class="col-lg-3">
+                <div class="col-12">
                     <label for="filter-jenjang" class="form-label small fw-medium">Jenjang</label>
                     <select id="filter-jenjang" class="filter-input form-select">
                         <option value="">Semua Jenjang</option>
@@ -217,13 +163,13 @@
                         <option value="PNF">PNF</option>
                     </select>
                 </div>
-                <div class="col-lg-3">
+                <div class="col-12">
                     <label for="filter-kecamatan" class="form-label small fw-medium">Kecamatan</label>
                     <select id="filter-kecamatan" class="filter-input form-select">
                         <option value="">Semua Kecamatan</option>
                     </select>
                 </div>
-                <div class="col-lg-3">
+                <div class="col-12">
                     <label for="filter-keterangan" class="form-label small fw-medium">Keterangan</label>
                     <select id="filter-keterangan" class="filter-input form-select">
                         <option value="">Semua Keterangan</option>
@@ -231,60 +177,193 @@
                         <option value="belum">Belum Mengisi</option>
                     </select>
                 </div>
-            </div>
-            <hr class="my-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="position-relative flex-grow-1 me-3">
-                     <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
-                     <input type="text" id="search-input" placeholder="Cari nama sekolah atau NPSN..." class="form-control ps-5">
+                 <hr class="my-3">
+                 <div class="col-12">
+                     <label for="search-input" class="form-label small fw-medium">Pencarian</label>
+                    <div class="position-relative">
+                         <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
+                         <input type="text" id="search-input" placeholder="Cari sekolah atau NPSN..." class="form-control ps-5">
+                    </div>
                 </div>
-                <div class="d-flex gap-2">
+            </div>
+        </div>
+        <div class="sidebar-footer border-top pt-3">
+             <button id="sidebar-toggle-bottom" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2">
+                <i class="bi bi-chevron-bar-left"></i>
+                <span>Sembunyikan</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div id="main-content">
+        <div class="container-fluid p-4 md:p-5">
+            <header class="d-flex justify-content-between align-items-center mb-5">
+                <div class="d-flex align-items-center gap-3">
+                    <button id="sidebar-toggle-main" class="btn btn-light d-none d-lg-block">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <div>
+                         <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-0">Progres Penginputan Data</h1>
+                         <p class="text-secondary mt-1 small d-none d-md-block">Update real-time status penginputan data sekolah.</p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button id="refresh-btn" class="btn btn-outline-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        <span class="d-none d-sm-inline">Refresh</span>
+                    </button>
                     <button id="download-excel" class="btn btn-success d-flex align-items-center gap-2">
                         <i class="bi bi-file-earmark-excel"></i>
-                        <span>Excel</span>
+                        <span class="d-none d-sm-inline">Excel</span>
                     </button>
                     <button id="share-whatsapp" class="btn btn-info text-white d-flex align-items-center gap-2">
                         <i class="bi bi-whatsapp"></i>
-                        <span>Share</span>
+                        <span class="d-none d-sm-inline">Share</span>
                     </button>
                 </div>
-            </div>
-        </div>
+            </header>
 
-        <!-- Tabel Data -->
-        <div id="loader-container" class="d-flex justify-content-center align-items-center py-5 d-none">
-            <div class="loader"></div>
-        </div>
-        <div id="data-container" class="card-custom overflow-hidden">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                        <tr>
-                            <th scope="col" class="px-3 py-3">NPSN</th>
-                            <th scope="col" class="px-3 py-3">Nama Satuan Pendidikan</th>
-                            <th scope="col" class="px-3 py-3">Jenjang</th>
-                            <th scope="col" class="px-3 py-3">Status Sekolah</th>
-                            <th scope="col" class="px-3 py-3">Kecamatan</th>
-                            <th scope="col" class="px-3 py-3 text-center">Keterangan</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body">
-                        <!-- Isi tabel akan di-generate oleh JavaScript -->
-                    </tbody>
-                </table>
-                 <div id="no-data" class="d-none text-center py-5">
-                    <p class="text-secondary fw-semibold">Data tidak ditemukan.</p>
+            <!-- Ringkasan Statistik (Clickable Cards) -->
+            <div id="summary-section" class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div data-status-filter="semua" class="summary-card card-custom p-4 d-flex flex-row align-items-center gap-4 cursor-pointer">
+                        <div class="icon-circle bg-primary bg-opacity-10 p-3 rounded-circle">
+                            <i class="bi bi-bank2 fs-4 text-primary"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-secondary mb-0">Total Sekolah</p>
+                            <p id="total-sekolah" class="h4 fw-bold mb-0">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div data-status-filter="sudah" class="summary-card card-custom p-4 d-flex flex-row align-items-center gap-4 cursor-pointer">
+                        <div class="icon-circle bg-success bg-opacity-10 p-3 rounded-circle">
+                             <i class="bi bi-check-circle-fill fs-4 text-success"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-secondary mb-0">Sudah Mengisi</p>
+                            <p id="sudah-mengisi" class="h4 fw-bold mb-0">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                     <div data-status-filter="belum" class="summary-card card-custom p-4 d-flex flex-row align-items-center gap-4 cursor-pointer">
+                        <div class="icon-circle bg-danger bg-opacity-10 p-3 rounded-circle">
+                            <i class="bi bi-x-circle-fill fs-4 text-danger"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-secondary mb-0">Belum Mengisi</p>
+                            <p id="belum-mengisi" class="h4 fw-bold mb-0">0</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <!-- Pagination -->
-            <div id="pagination-controls" class="p-3 border-top d-flex justify-content-between align-items-center">
-                 <!-- Kontrol paginasi akan di-generate oleh JavaScript -->
+            
+            <!-- Ringkasan Responden -->
+            <div class="row g-4 mb-5">
+                <div class="col-6 col-md-3">
+                    <div data-responden-filter="Pengawas" class="responden-card card-custom p-3 d-flex flex-row align-items-center gap-3 cursor-pointer">
+                        <div class="icon-circle bg-info bg-opacity-10 rounded-circle">
+                            <i class="bi bi-person-video3 fs-5 text-info"></i>
+                        </div>
+                        <div>
+                            <p class="small text-secondary mb-0">Pengawas</p>
+                            <p id="responden-pengawas" class="h5 fw-bold mb-0">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div data-responden-filter="Kepala Sekolah" class="responden-card card-custom p-3 d-flex flex-row align-items-center gap-3 cursor-pointer">
+                        <div class="icon-circle bg-warning bg-opacity-10 rounded-circle">
+                            <i class="bi bi-person-badge fs-5 text-warning"></i>
+                        </div>
+                        <div>
+                            <p class="small text-secondary mb-0">Kepala Sekolah</p>
+                            <p id="responden-kepsek" class="h5 fw-bold mb-0">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div data-responden-filter="Guru" class="responden-card card-custom p-3 d-flex flex-row align-items-center gap-3 cursor-pointer">
+                        <div class="icon-circle bg-success bg-opacity-10 rounded-circle">
+                            <i class="bi bi-people fs-5 text-success"></i>
+                        </div>
+                        <div>
+                            <p class="small text-secondary mb-0">Guru</p>
+                            <p id="responden-guru" class="h5 fw-bold mb-0">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div data-responden-filter="Komite Sekolah" class="responden-card card-custom p-3 d-flex flex-row align-items-center gap-3 cursor-pointer">
+                        <div class="icon-circle bg-secondary bg-opacity-10 rounded-circle">
+                            <i class="bi bi-person-workspace fs-5 text-secondary"></i>
+                        </div>
+                        <div>
+                            <p class="small text-secondary mb-0">Komite Sekolah</p>
+                            <p id="responden-komite" class="h5 fw-bold mb-0">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grafik -->
+            <div class="row g-4 mb-5">
+                <div class="col-lg-6">
+                    <div class="card-custom p-4">
+                        <h3 class="font-semibold mb-3 text-center">Data per Kecamatan</h3>
+                        <div class="position-relative" style="height: 320px;">
+                            <canvas id="kecamatanChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                     <div class="card-custom p-4">
+                        <h3 class="font-semibold mb-3 text-center">Data per Jenjang</h3>
+                        <div class="position-relative" style="height: 320px;">
+                            <canvas id="jenjangChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabel Data -->
+            <div id="loader-container" class="d-flex justify-content-center align-items-center py-5 d-none">
+                <div class="loader"></div>
+            </div>
+            <div id="data-container" class="card-custom overflow-hidden">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th scope="col" class="px-3 py-3">NPSN</th>
+                                <th scope="col" class="px-3 py-3">Nama Satuan Pendidikan</th>
+                                <th scope="col" class="px-3 py-3">Jenjang</th>
+                                <th scope="col" class="px-3 py-3">Status Sekolah</th>
+                                <th scope="col" class="px-3 py-3">Kecamatan</th>
+                                <th scope="col" class="px-3 py-3 text-center">Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Isi tabel akan di-generate oleh JavaScript -->
+                        </tbody>
+                    </table>
+                     <div id="no-data" class="d-none text-center py-5">
+                        <p class="text-secondary fw-semibold">Data tidak ditemukan.</p>
+                    </div>
+                </div>
+                <!-- Pagination -->
+                <div id="pagination-controls" class="p-3 border-top d-flex justify-content-between align-items-center">
+                     <!-- Kontrol paginasi akan di-generate oleh JavaScript -->
+                </div>
             </div>
         </div>
     </div>
     
     <!-- Mobile Bottom Navigation -->
-    <div id="mobile-controls" class="d-md-none mobile-nav p-2 d-flex justify-content-around align-items-center">
+    <div id="mobile-controls" class="d-lg-none mobile-nav p-2 d-flex justify-content-around align-items-center">
         <button class="btn btn-light flex-fill" data-bs-toggle="modal" data-bs-target="#mobile-search-modal">
             <i class="bi bi-search"></i>
             <div><small>Cari</small></div>
@@ -393,6 +472,11 @@
             const ROWS_PER_PAGE = 15;
 
             // --- ELEMEN DOM ---
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            const sidebarToggleMainBtn = document.getElementById('sidebar-toggle-main');
+            const sidebarToggleBottomBtn = document.getElementById('sidebar-toggle-bottom');
+            
             const loader = document.getElementById('loader-container');
             const dataContainer = document.getElementById('data-container');
             const searchInput = document.getElementById('search-input');
@@ -432,6 +516,7 @@
             const mobileDownloadExcelBtn = document.getElementById('mobile-download-excel');
             const mobileShareWhatsappBtn = document.getElementById('mobile-share-whatsapp');
             const paginationControls = document.getElementById('pagination-controls');
+            const refreshBtn = document.getElementById('refresh-btn');
 
             const detailModal = document.getElementById('detail-modal');
             const modalTitle = document.getElementById('modal-title');
@@ -474,6 +559,24 @@
                 
                 // Muat data lainnya di background
                 preloadOtherDataTypes();
+            }
+            
+            async function handleRefresh() {
+                const icon = refreshBtn.querySelector('i');
+                icon.classList.add('spinning');
+                refreshBtn.disabled = true;
+
+                rawDataCache = {}; // Hapus cache
+                await loadDataForTipe(state.tipe, true); // Muat ulang data yang aktif
+                allData = getCombinedDataForTipe(state.tipe);
+                populateFilters();
+                applyFiltersAndRender();
+                preloadOtherDataTypes(); // Mulai ulang preload data background
+
+                setTimeout(() => {
+                    icon.classList.remove('spinning');
+                    refreshBtn.disabled = false;
+                }, 500);
             }
 
             async function loadDataForTipe(tipe, showLoaderFlag) {
@@ -875,6 +978,7 @@
                 
                 // Populate desktop and mobile filters
                 [desktopFilters.kecamatan, mobileFilters.kecamatan].forEach(select => {
+                    const currentVal = select.value;
                     select.innerHTML = '<option value="">Semua Kecamatan</option>';
                     kecamatans.forEach(k => {
                         const option = document.createElement('option');
@@ -882,6 +986,7 @@
                         option.textContent = k;
                         select.appendChild(option);
                     });
+                    select.value = currentVal;
                 });
             }
 
@@ -910,6 +1015,13 @@
             function openModal() {
                 detailModal.classList.remove('opacity-0', 'pointer-events-none');
                 detailModal.querySelector('.modal-container').classList.remove('scale-95');
+                
+                const isSidebarVisible = !sidebar.classList.contains('collapsed');
+                if (window.innerWidth > 992 && isSidebarVisible) {
+                    detailModal.style.paddingLeft = '280px';
+                } else {
+                    detailModal.style.paddingLeft = '0px';
+                }
             }
 
             function closeModal() {
@@ -930,6 +1042,30 @@
             // --- EVENT LISTENERS ---
 
             function addEventListeners() {
+                // Sidebar Toggle
+                const toggleSidebar = () => {
+                    sidebar.classList.toggle('collapsed');
+                    mainContent.classList.toggle('expanded');
+
+                    const buttonText = sidebarToggleBottomBtn.querySelector('span');
+                    const buttonIcon = sidebarToggleBottomBtn.querySelector('i');
+                    if (sidebar.classList.contains('collapsed')) {
+                        buttonText.textContent = 'Tampilkan';
+                        buttonIcon.classList.replace('bi-chevron-bar-left', 'bi-chevron-bar-right');
+                    } else {
+                        buttonText.textContent = 'Sembunyikan';
+                        buttonIcon.classList.replace('bi-chevron-bar-right', 'bi-chevron-bar-left');
+                    }
+                    
+                    // Re-render chart after transition to fix resizing issue
+                    setTimeout(() => {
+                        if (kecamatanChart) kecamatanChart.resize();
+                        if (jenjangChart) jenjangChart.resize();
+                    }, 300);
+                };
+                sidebarToggleMainBtn.addEventListener('click', toggleSidebar);
+                sidebarToggleBottomBtn.addEventListener('click', toggleSidebar);
+
                  // Desktop Filters
                 for (const key in desktopFilters) {
                     desktopFilters[key].addEventListener('change', async (e) => {
@@ -1086,6 +1222,7 @@
                 mobileDownloadExcelBtn.addEventListener('click', handleDownload);
                 shareWhatsappBtn.addEventListener('click', handleShare);
                 mobileShareWhatsappBtn.addEventListener('click', handleShare);
+                refreshBtn.addEventListener('click', handleRefresh);
             }
 
             // --- INISIALISASI APLIKASI ---
@@ -1094,5 +1231,4 @@
     </script>
 </body>
 </html>
-
 
